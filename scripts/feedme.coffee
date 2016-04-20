@@ -5,6 +5,8 @@
 #   This includes
 #    * fetching from fabrik
 #    * fetching from ernis
+#
+# Author: cholter
 
 urllib = require "urllib-sync"
 jsdom = require "jsdom"

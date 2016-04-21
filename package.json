@@ -1,6 +1,6 @@
 {
   "name": "hubot",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "author": "Lorenz Leutgeb <lorenz.leutgeb@catalysts.cc>",
   "description": "A simple helpful robot for Catalysts",
@@ -17,9 +17,13 @@
     "hubot-rules": "^0.1.1",
     "hubot-scripts": "^2.16.2",
     "hubot-shipit": "^0.2.0",
-    "hubot-slack": "^3.4.2"
+    "hubot-slack": "^3.4.2",
+    "jquery": "^2.2.3",
+    "jsdom": "^8.4.0",
+    "moment": "^2.13.0",
+    "urllib-sync": "^1.1.2"
   },
   "engines": {
-    "node": "0.10.x"
+    "node": "5.10.x"
   }
 }

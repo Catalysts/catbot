@@ -67,6 +67,7 @@ class Fabrik
       @robot.brain.set "feedme.fabrik.save", @errors.menuFromFuture
       return
 
+    # fabrik is closed
     if day > 5
       @robot.brain.set "feedme.fabrik.save", @errors.closed
       return
@@ -93,7 +94,7 @@ class Ernis
 
     # hack to include jQuery
     $ = require("jquery")(jsdom.jsdom(rawbody).defaultView)
-    # ernis closed
+    # erni's is closed
     if day > 5
       @robot.brain.set "feedme.ernis.save", @errors.closed
       return
@@ -106,6 +107,7 @@ module.exports = (robot) ->
   fabrik = new Fabrik(robot)
   ernis = new Ernis(robot)
   now = moment()
+  # ranging from 1 (Monday) to 7 (Sunday)
   day = now.isoWeekday()
 
   robot.respond /feedme/i, (res) ->
@@ -113,4 +115,6 @@ module.exports = (robot) ->
     ernis.getMenu(now, day)
     fabrikMenu = robot.brain.get "feedme.fabrik.save"
     ernisMenu = robot.brain.get "feedme.ernis.save"
-    res.send "Heutiges Mittagsmenü: \nFabrik: \n#{fabrikMenu}\n\nErni's: \n#{ernisMenu}"
+    res.send "Heutiges Mittagsmenü:\n
+      \nFabrik: \n#{fabrikMenu}\n
+      \nErni's: \n#{ernisMenu}"

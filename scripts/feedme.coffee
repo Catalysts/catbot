@@ -15,95 +15,99 @@ require "datejs"
 DAY = 1000 * 60 * 60  * 24
 
 getDateDiff = (date1, date2, interval) ->
-  return Math.round((date1.getTime() - date2.getTime()) / interval)
+  Math.round((date1.getTime() - date2.getTime()) / interval)
 
 fetch = (target) ->
-  return urllib.request(target).data
+  urllib.request(target).data
 
 
 class Fabrik
   target : "http://www.diefabrik.co.at/mittagsmenue/index.html"
   holidayMagic : "urlaub"
-  errors:
+  errors :
     closed : "fabrik is closed"
-    menuFromPast :"the menu is outdated"
-    menuFromFuture :"the menu is from the future"
-    resting :"fabrik is on a day off"
-    holiday :"fabrik is probably on holiday, fall back to manual check"
+    menuFromPast : "the menu is outdated"
+    menuFromFuture : "the menu is from the future"
+    resting : "fabrik is on a day off"
+    holiday : "fabrik is probably on holiday, fall back to manual check"
 
   constructor: (@robot) ->
 
   checkHoliday: (text) =>
-    return text.toLowerCase().indexOf(@holidayMagic) > 0
+    text.toLowerCase().indexOf(@holidayMagic) > 0
 
   parseDates: ($) ->
     docDate = $("h2:eq(0)").html()
-    return /(\d{2}\.\d{2}\.\d{4}) bis (\d{2}\.\d{2}\.\d{4})/.exec(docDate)
+    /(\d{2}\.\d{2}\.\d{4}) bis (\d{2}\.\d{2}\.\d{4})/.exec(docDate)
 
   extractMeal: ($, day) ->
-
-    # Saturday & Sunday
-    return @errors.closed if day == 6 or day == 0
     menu = $(".contenttable .tr-#{(day-1)*2} .td-2").html()
     # Ruhetag
-    return @errors.resting if menu.toLowerCase() == 'ruhetag'
-    # all good :)
-    return menu
+    if menu.toLowerCase() is 'ruhetag' then @errors.resting else menu
 
   getMenu: () =>
     now = new Date()
     day = now.getDay()
-    lastCheck = new Date(@robot.brain.get "feedme.fabrik.lastCheck" or 0)
+    lastCheck = new Date(@robot.brain.get("feedme.fabrik.lastCheck") or 0)
     # only check once per day, otherwise we're good to go
-    if getDateDiff(now, lastCheck, DAY) > 0
-      rawbody = fetch(@target)
+    return if getDateDiff(now, lastCheck, DAY) < 0
 
-      return @errors.holiday if @checkHoliday(rawbody.toString())
+    @robot.brain.set "feedme.fabrik.lastCheck", now
+    rawbody = fetch(@target)
 
-      # hack to include jQuery
-      $ = require("jquery")(jsdom.jsdom(rawbody).defaultView)
-      parsedDates = @parseDates($)
+    if @checkHoliday(rawbody.toString())
+      @robot.brain.set "feedme.fabrik.save", @errors.holiday
+      return
 
-      # check for outdated menu
-      if now.getTime() > (Date.parseExact(parsedDates[2], "d.M.yyyy").getTime() + DAY)
-        @robot.brain.set "feedme.fabrik.save", @errors.menuFromPast
+    # hack to include jQuery
+    $ = require("jquery")(jsdom.jsdom(rawbody).defaultView)
+    parsedDates = @parseDates($)
 
-      # check for future menu
-      else if now.getTime() < Date.parseExact(parsedDates[1], "d.M.yyyy").getTime()
-        @robot.brain.set "feedme.fabrik.save", @errors.menuFromFuture
+    # check for outdated menu
+    if now.getTime() > (Date.parseExact(parsedDates[2], "d.M.yyyy").getTime() + DAY)
+      @robot.brain.set "feedme.fabrik.save", @errors.menuFromPast
+      return
 
-      else
-        @robot.brain.set "feedme.fabrik.save", @extractMeal($, day)
+    # check for future menu
+    if now.getTime() < Date.parseExact(parsedDates[1], "d.M.yyyy").getTime()
+      @robot.brain.set "feedme.fabrik.save", @errors.menuFromFuture
+      return
 
-      @robot.brain.set "feedme.fabrik.lastCheck", now
+    if day == 5 or day == 6
+      @robot.brain.set "feedme.fabrik.save", @errors.closed
+      return
+
+    @robot.brain.set "feedme.fabrik.save", @extractMeal($, day)
 
 class Ernis
   target : "http://www.ernis.at"
-  errors:
-	  closed : "ernis is closed"
+  errors :
+    closed : "ernis is closed"
 
   constructor: (@robot) ->
 
   extractMeal: ($, day) ->
-    return $("#accordion > div .moduletable:eq(#{day-1}) > div").text().trim()
+    $("#accordion > div .moduletable:eq(#{day-1}) > div").text().trim()
 
   getMenu: () =>
     now = new Date()
     day = now.getDay()
 
-    lastCheck = new Date(@robot.brain.get "feedme.ernis.lastCheck" or 0)
+    lastCheck = new Date(@robot.brain.get("feedme.ernis.lastCheck") or 0)
     # only check once per day, otherwise we're good to go
-    if getDateDiff(now, lastCheck, DAY) > 0
-      rawbody = fetch(@target)
+    return if getDateDiff(now, lastCheck, DAY) < 0
 
-      # hack to include jQuery
-      $ = require("jquery")(jsdom.jsdom(rawbody).defaultView)
-      # ernis closed
-      if day > 0 & day < 6
-        @robot.brain.set "feedme.ernis.save", @extractMeal($, day)
-      else @robot.brain.set "feedme.ernis.save", @errors.closed
+    @robot.brain.set "feedme.ernis.lastCheck", now
+    rawbody = fetch(@target)
 
-      @robot.brain.set "feedme.ernis.lastCheck", now
+    # hack to include jQuery
+    $ = require("jquery")(jsdom.jsdom(rawbody).defaultView)
+    # ernis closed
+    if day == 5 or day == 6
+      @robot.brain.set "feedme.ernis.save", @errors.closed
+      return
+
+    @robot.brain.set "feedme.ernis.save", @extractMeal($, day)
 
 
 module.exports = (robot) ->
@@ -115,4 +119,4 @@ module.exports = (robot) ->
     ernis.getMenu()
     fabrikMenu = robot.brain.get "feedme.fabrik.save"
     ernisMenu = robot.brain.get "feedme.ernis.save"
-    res.send "Heutiges Mittagsmenü: \nFabrik: \n#{fabrikMenu}\n\nErnis: \n#{ernisMenu}"
+    res.send "Heutiges Mittagsmenü: \nFabrik: \n#{fabrikMenu}\n\nErni's: \n#{ernisMenu}"

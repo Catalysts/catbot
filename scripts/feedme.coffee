@@ -46,7 +46,6 @@ class Fabrik
     # only check once per day, otherwise we're good to go
     return if now.isSameOrBefore(lastCheck, 'day')
 
-    @robot.brain.set "feedme.fabrik.lastCheck", now
     rawbody = fetch(@target)
 
     if @checkHoliday(rawbody.toString())
@@ -60,19 +59,18 @@ class Fabrik
     # check for outdated menu
     if now.isAfter(moment(parsedDates[2], "DD.MM.YYYY"), 'day')
       @robot.brain.set "feedme.fabrik.save", @errors.menuFromPast
-      return
 
     # check for future menu
-    if now.isBefore(moment(parsedDates[1], "DD.MM.YYYY"), 'day')
+    else if now.isBefore(moment(parsedDates[1], "DD.MM.YYYY"), 'day')
       @robot.brain.set "feedme.fabrik.save", @errors.menuFromFuture
-      return
 
     # fabrik is closed
-    if day > 5
+    else if day > 5
       @robot.brain.set "feedme.fabrik.save", @errors.closed
-      return
 
-    @robot.brain.set "feedme.fabrik.save", @extractMeal($, day)
+    else
+      @robot.brain.set "feedme.fabrik.save", @extractMeal($, day)
+      @robot.brain.set "feedme.fabrik.lastCheck", now
 
 class Ernis
   target : "http://www.ernis.at"
@@ -89,7 +87,6 @@ class Ernis
     # only check once per day, otherwise we're good to go
     return if now.isSameOrBefore(lastCheck, 'day')
 
-    @robot.brain.set "feedme.ernis.lastCheck", now
     rawbody = fetch(@target)
 
     # hack to include jQuery
@@ -97,9 +94,10 @@ class Ernis
     # erni's is closed
     if day > 5
       @robot.brain.set "feedme.ernis.save", @errors.closed
-      return
 
-    @robot.brain.set "feedme.ernis.save", @extractMeal($, day)
+    else
+      @robot.brain.set "feedme.ernis.save", @extractMeal($, day)
+      @robot.brain.set "feedme.ernis.lastCheck", now
 
 
 module.exports = (robot) ->

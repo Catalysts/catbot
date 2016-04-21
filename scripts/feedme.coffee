@@ -25,16 +25,16 @@ class Fabrik
   target : "http://www.diefabrik.co.at/mittagsmenue/index.html"
   holidayMagic : "urlaub"
   errors:
-	  closed : "fabrik is closed"
-	  menuFromPast :"the menu is outdated"
-	  menuFromFuture :"the menu is from the future"
-	  resting :"fabrik is on a day off"
-	  holiday :"fabrik is probably on holiday, fall back to manual check"
+    closed : "fabrik is closed"
+    menuFromPast :"the menu is outdated"
+    menuFromFuture :"the menu is from the future"
+    resting :"fabrik is on a day off"
+    holiday :"fabrik is probably on holiday, fall back to manual check"
 
   constructor: (@robot) ->
 
   checkHoliday: (text) =>
-    return true if text.toLowerCase().indexOf(@holidayMagic) > 0
+    return text.toLowerCase().indexOf(@holidayMagic) > 0
 
   parseDates: ($) ->
     docDate = $("h2:eq(0)").html()
@@ -43,18 +43,17 @@ class Fabrik
   extractMeal: ($, day) ->
 
     # Saturday & Sunday
-    return @errors.closed if day == 6 | day == 0
+    return @errors.closed if day == 6 or day == 0
     menu = $(".contenttable .tr-#{(day-1)*2} .td-2").html()
     # Ruhetag
     return @errors.resting if menu.toLowerCase() == 'ruhetag'
     # all good :)
     return menu
 
-  getMenue: () =>
+  getMenu: () =>
     now = new Date()
     day = now.getDay()
-    lastCheck = new Date(@robot.brain.get "feedme.fabrik.lastCheck")
-    lastCheck = Date.parseExact("01.01.1970", "d.M.yyyy") if not lastCheck
+    lastCheck = new Date(@robot.brain.get "feedme.fabrik.lastCheck" or 0)
     # only check once per day, otherwise we're good to go
     if getDateDiff(now, lastCheck, DAY) > 0
       rawbody = fetch(@target)
@@ -65,11 +64,11 @@ class Fabrik
       $ = require("jquery")(jsdom.jsdom(rawbody).defaultView)
       parsedDates = @parseDates($)
 
-      # check for outdated menue
+      # check for outdated menu
       if now.getTime() > (Date.parseExact(parsedDates[2], "d.M.yyyy").getTime() + DAY)
         @robot.brain.set "feedme.fabrik.save", @errors.menuFromPast
 
-      # check for future menue
+      # check for future menu
       else if now.getTime() < Date.parseExact(parsedDates[1], "d.M.yyyy").getTime()
         @robot.brain.set "feedme.fabrik.save", @errors.menuFromFuture
 
@@ -88,12 +87,11 @@ class Ernis
   extractMeal: ($, day) ->
     return $("#accordion > div .moduletable:eq(#{day-1}) > div").text().trim()
 
-  getMenue: () =>
+  getMenu: () =>
     now = new Date()
     day = now.getDay()
 
-    lastCheck = new Date(@robot.brain.get "feedme.ernis.lastCheck")
-    lastCheck = Date.parseExact("01.01.1970", "d.M.yyyy") if not lastCheck
+    lastCheck = new Date(@robot.brain.get "feedme.ernis.lastCheck" or 0)
     # only check once per day, otherwise we're good to go
     if getDateDiff(now, lastCheck, DAY) > 0
       rawbody = fetch(@target)
@@ -113,8 +111,8 @@ module.exports = (robot) ->
   fabrik = new Fabrik(robot)
   ernis = new Ernis(robot)
   robot.respond /feedme/i, (res) ->
-    fabrik.getMenue()
-    ernis.getMenue()
-    fabrikMenue = robot.brain.get "feedme.fabrik.save"
-    ernisMenue = robot.brain.get "feedme.ernis.save"
-    res.send "Heutiges Mittagsmenü: \nFabrik: \n#{fabrikMenue}\n\nErnis: \n#{ernisMenue}"
+    fabrik.getMenu()
+    ernis.getMenu()
+    fabrikMenu = robot.brain.get "feedme.fabrik.save"
+    ernisMenu = robot.brain.get "feedme.ernis.save"
+    res.send "Heutiges Mittagsmenü: \nFabrik: \n#{fabrikMenu}\n\nErnis: \n#{ernisMenu}"

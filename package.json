@@ -1,6 +1,6 @@
 {
   "name": "hubot",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "author": "Lorenz Leutgeb <lorenz.leutgeb@catalysts.cc>",
   "description": "A simple helpful robot for Catalysts",

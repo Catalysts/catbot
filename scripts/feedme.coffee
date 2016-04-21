@@ -10,12 +10,8 @@
 
 urllib = require "urllib-sync"
 jsdom = require "jsdom"
-require "datejs"
+moment = require "moment"
 
-DAY = 1000 * 60 * 60  * 24
-
-getDateDiff = (date1, date2, interval) ->
-  Math.round((date1.getTime() - date2.getTime()) / interval)
 
 fetch = (target) ->
   urllib.request(target).data
@@ -45,12 +41,10 @@ class Fabrik
     # Ruhetag
     if menu.toLowerCase() is 'ruhetag' then @errors.resting else menu
 
-  getMenu: () =>
-    now = new Date()
-    day = now.getDay()
-    lastCheck = new Date(@robot.brain.get("feedme.fabrik.lastCheck") or 0)
+  getMenu: (now, day) =>
+    lastCheck = moment(@robot.brain.get("feedme.fabrik.lastCheck") or 0)
     # only check once per day, otherwise we're good to go
-    return if getDateDiff(now, lastCheck, DAY) < 0
+    return if now.isSameOrBefore(lastCheck, 'day')
 
     @robot.brain.set "feedme.fabrik.lastCheck", now
     rawbody = fetch(@target)
@@ -64,16 +58,16 @@ class Fabrik
     parsedDates = @parseDates($)
 
     # check for outdated menu
-    if now.getTime() > (Date.parseExact(parsedDates[2], "d.M.yyyy").getTime() + DAY)
+    if now.isAfter(moment(parsedDates[2], "DD.MM.YYYY"), 'day')
       @robot.brain.set "feedme.fabrik.save", @errors.menuFromPast
       return
 
     # check for future menu
-    if now.getTime() < Date.parseExact(parsedDates[1], "d.M.yyyy").getTime()
+    if now.isBefore(moment(parsedDates[1], "DD.MM.YYYY"), 'day')
       @robot.brain.set "feedme.fabrik.save", @errors.menuFromFuture
       return
 
-    if day == 5 or day == 6
+    if day > 5
       @robot.brain.set "feedme.fabrik.save", @errors.closed
       return
 
@@ -89,13 +83,10 @@ class Ernis
   extractMeal: ($, day) ->
     $("#accordion > div .moduletable:eq(#{day-1}) > div").text().trim()
 
-  getMenu: () =>
-    now = new Date()
-    day = now.getDay()
-
-    lastCheck = new Date(@robot.brain.get("feedme.ernis.lastCheck") or 0)
+  getMenu: (now, day) =>
+    lastCheck = moment(@robot.brain.get("feedme.ernis.lastCheck") or 0)
     # only check once per day, otherwise we're good to go
-    return if getDateDiff(now, lastCheck, DAY) < 0
+    return if now.isSameOrBefore(lastCheck, 'day')
 
     @robot.brain.set "feedme.ernis.lastCheck", now
     rawbody = fetch(@target)
@@ -103,7 +94,7 @@ class Ernis
     # hack to include jQuery
     $ = require("jquery")(jsdom.jsdom(rawbody).defaultView)
     # ernis closed
-    if day == 5 or day == 6
+    if day > 5
       @robot.brain.set "feedme.ernis.save", @errors.closed
       return
 
@@ -114,9 +105,12 @@ module.exports = (robot) ->
 
   fabrik = new Fabrik(robot)
   ernis = new Ernis(robot)
+  now = moment()
+  day = now.isoWeekday()
+
   robot.respond /feedme/i, (res) ->
-    fabrik.getMenu()
-    ernis.getMenu()
+    fabrik.getMenu(now, day)
+    ernis.getMenu(now, day)
     fabrikMenu = robot.brain.get "feedme.fabrik.save"
     ernisMenu = robot.brain.get "feedme.ernis.save"
     res.send "Heutiges Mittagsmenü: \nFabrik: \n#{fabrikMenu}\n\nErni's: \n#{ernisMenu}"

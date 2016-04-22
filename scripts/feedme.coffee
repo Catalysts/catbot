@@ -37,7 +37,7 @@ class Fabrik
     /(\d{2}\.\d{2}\.\d{4}) bis (\d{2}\.\d{2}\.\d{4})/.exec(docDate)
 
   extractMeal: ($, day) ->
-    menu = $(".contenttable .tr-#{(day-1)*2} .td-2").html()
+    menu = $(".contenttable .tr-even:eq(#{day-1}) .td-2").html()
     # Ruhetag
     if menu.toLowerCase() is 'ruhetag' then @errors.resting else menu
 

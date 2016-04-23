@@ -11,6 +11,11 @@
 urllib = require "urllib-sync"
 jsdom = require "jsdom"
 moment = require "moment"
+upperCaseFirst = require('upper-case-first')
+
+FOOD_TIME =
+  HOUR : 11
+  MINUTE : 45
 
 
 fetch = (target) ->
@@ -104,15 +109,78 @@ module.exports = (robot) ->
 
   fabrik = new Fabrik(robot)
   ernis = new Ernis(robot)
-  now = moment()
-  # ranging from 1 (Monday) to 7 (Sunday)
-  day = now.isoWeekday()
+
+  # note that we can't store the reminders anywhere because node.js returns a
+  # Timeout object in contrast to the usual (browser) integer which is then
+  # needed to clear the timeout later on (if there is a new reminder set). This
+  # Timeout object can't be JSON.stringified (circular reference) and thus not
+  # stored. As a result reminders are lost on restart of hubot.
+  reminder = {}
+
+  # wait for given time and then send a message to #vie-food with all
+  # subscribed users for this food type.
+  setReminder = (foodType, hour = FOOD_TIME.HOUR, minute = FOOD_TIME.MINUTE) ->
+    setTimeout ( =>
+      eater = robot.brain.get "feedme.eater"
+      people = if eater and foodType of eater then eater[foodType] else []
+      msg = if people.length > 0 then "#{people.toString()}:\n" else ""
+      robot.messageRoom "vie-food", msg + "Los los ... #{foodType} wartet nicht!"
+      delete reminder[foodType]
+      # clear all eaters, they're supposed to be fed.
+      delete eater[foodType]
+      robot.brain.set "feedme.eater", eater
+    ), moment().hour(hour).minute(minute).seconds(0)
+      .diff(moment(), 'milliseconds')
+
+  existsReminder = (foodType) ->
+    foodType of reminder
+
+  # clear all reservations + reminders @midnight
+  setClearTimeout = ->
+    setTimeout ( =>
+      robot.brain.set "feedme.eater", {}
+      reminder = {}
+      setClearTimeout()
+    ), moment().endOf('day').diff(moment(), 'milliseconds')
+
+  setClearTimeout()
 
   robot.respond /feedme/i, (res) ->
+    now = moment()
+    # ranging from 1 (Monday) to 7 (Sunday)
+    day = now.isoWeekday()
     fabrik.getMenu(now, day)
     ernis.getMenu(now, day)
     fabrikMenu = robot.brain.get "feedme.fabrik.save"
     ernisMenu = robot.brain.get "feedme.ernis.save"
+
     res.send "Heutiges Mittagsmenü:\n
       \nFabrik: \n#{fabrikMenu}\n
-      \nErni's: \n#{ernisMenu}"
+      \nErni's: \n#{ernisMenu}\n
+      \nNatürlich gibt es auch noch:
+      \nSpar, Billa, Burgerking, Gumpendorfer oder Pizza."
+
+  # subscribe to food and reminder
+  robot.hear /(fabrik|ernis|spar|billa|burgerking|gumpendorfer|pizza) \+\d*/i
+  , (res) ->
+
+    foodType = upperCaseFirst(res.match[1].toLowerCase())
+    eater = robot.brain.get("feedme.eater") or {}
+    unless foodType of eater then eater[foodType] = []
+    # save name of user who sent the message to notify him later
+    eater[foodType].push "@#{res.message.user.name}"
+    robot.brain.set "feedme.eater", eater
+    # if there is no reminder + it's before default time => set new reminder
+    if moment().isBefore(moment().hour(FOOD_TIME.HOUR).minute(FOOD_TIME.MINUTE))
+      unless existsReminder(foodType)
+        reminder[foodType] = setReminder(foodType)
+
+  # clears old reminder + sets new one with given time.
+  robot.hear /(fabrik|ernis|spar|billa|burgerking|gumpendorfer) (\d\d).?(\d\d)/i
+  , (res) ->
+    foodType = upperCaseFirst(res.match[1].toLowerCase())
+    hour = res.match[2]
+    minute = res.match[3]
+    if foodType of reminder
+      clearTimeout(reminder[foodType])
+    reminder[foodType] = setReminder(foodType, hour, minute)

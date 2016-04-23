@@ -11,12 +11,21 @@
 urllib = require "urllib-sync"
 jsdom = require "jsdom"
 moment = require "moment"
-upperCaseFirst = require('upper-case-first')
 
 FOOD_TIME =
   HOUR : 11
   MINUTE : 45
 
+FOOD_REGEX = "fab?r?i?k?|ern?i?s?|spa?r?|bil?l?a?|bur?g?e?r?k?i?n?g?|bk|gum?p?e?n?d?o?r?f?e?r?|piz?z?a?"
+
+FOODTYPES =
+  fa : "Fabrik"
+  er : "Erni's"
+  sp : "Spar"
+  bi : "Billa"
+  bu : "Burger King"
+  gu : "Gumpendorfer"
+  pi : "Pizza"
 
 fetch = (target) ->
   urllib.request(target).data
@@ -124,10 +133,10 @@ module.exports = (robot) ->
       eater = robot.brain.get "feedme.eater"
       people = if eater and foodType of eater then eater[foodType] else []
       msg = if people.length > 0 then "#{people.toString()}:\n" else ""
-      robot.messageRoom "vie-food", msg + "Los los ... #{foodType} wartet nicht!"
+      robot.messageRoom "vie-food", msg + "Los los ... #{FOODTYPES[foodType]} wartet nicht!"
       delete reminder[foodType]
       # clear all eaters, they're supposed to be fed.
-      delete eater[foodType]
+      if eater then delete eater[foodType]
       robot.brain.set "feedme.eater", eater
     ), moment().hour(hour).minute(minute).seconds(0)
       .diff(moment(), 'milliseconds')
@@ -161,14 +170,17 @@ module.exports = (robot) ->
       \nSpar, Billa, Burgerking, Gumpendorfer oder Pizza."
 
   # subscribe to food and reminder
-  robot.hear /(fabrik|ernis|spar|billa|burgerking|gumpendorfer|pizza) \+\d*/i
+  robot.hear (new RegExp("(#{FOOD_REGEX}) \\+(\\d*)", "i"))
   , (res) ->
-
-    foodType = upperCaseFirst(res.match[1].toLowerCase())
+    foodType = res.match[1].toLowerCase().substr(0,2)
+    if foodType is "bk" then foodType = "bu"
     eater = robot.brain.get("feedme.eater") or {}
     unless foodType of eater then eater[foodType] = []
     # save name of user who sent the message to notify him later
-    eater[foodType].push "@#{res.message.user.name}"
+    count = res.match[2]
+    user = "@#{res.message.user.name}"
+    user += " x#{count}" if count > 1
+    eater[foodType].push user
     robot.brain.set "feedme.eater", eater
     # if there is no reminder + it's before default time => set new reminder
     if moment().isBefore(moment().hour(FOOD_TIME.HOUR).minute(FOOD_TIME.MINUTE))
@@ -176,9 +188,10 @@ module.exports = (robot) ->
         reminder[foodType] = setReminder(foodType)
 
   # clears old reminder + sets new one with given time.
-  robot.hear /(fabrik|ernis|spar|billa|burgerking|gumpendorfer) (\d\d).?(\d\d)/i
+  robot.hear (new RegExp("(#{FOOD_REGEX}) (\\d\\d).?(\\d\\d)", "i"))
   , (res) ->
-    foodType = upperCaseFirst(res.match[1].toLowerCase())
+    foodType = res.match[1].toLowerCase().substr(0,2)
+    if foodType is "bk" then foodType = "bu"
     hour = res.match[2]
     minute = res.match[3]
     if foodType of reminder

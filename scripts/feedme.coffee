@@ -56,17 +56,17 @@ class Fabrik
     $ = require("jquery")(jsdom.jsdom(rawbody).defaultView)
     parsedDates = @parseDates($)
 
+    # fabrik is closed
+    if day > 5
+      @robot.brain.set "feedme.fabrik.save", @errors.closed
+
     # check for outdated menu
-    if now.isAfter(moment(parsedDates[2], "DD.MM.YYYY"), 'day')
+    else if now.isAfter(moment(parsedDates[2], "DD.MM.YYYY"), 'day')
       @robot.brain.set "feedme.fabrik.save", @errors.menuFromPast
 
     # check for future menu
     else if now.isBefore(moment(parsedDates[1], "DD.MM.YYYY"), 'day')
       @robot.brain.set "feedme.fabrik.save", @errors.menuFromFuture
-
-    # fabrik is closed
-    else if day > 5
-      @robot.brain.set "feedme.fabrik.save", @errors.closed
 
     else
       @robot.brain.set "feedme.fabrik.save", @extractMeal($, day)

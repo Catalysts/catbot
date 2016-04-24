@@ -16,7 +16,7 @@ FOOD_TIME =
   HOUR : 11
   MINUTE : 45
 
-FOOD_REGEX = "fab?r?i?k?|ern?i?s?|spa?r?|bil?l?a?|bur?g?e?r?k?i?n?g?|bk|gum?p?e?n?d?o?r?f?e?r?|piz?z?a?"
+FOOD_REGEX = "fab?r?i?k?|ern?i?s?|spa?r?|bil?l?a?|bur?g?e?r?k?i?n?g?|bk|gum?p?e?n?d?o?r?f?e?r?|mar?g?a?r?e?t?e?n?g?ü?r?t?e?l?|piz?z?a?"
 
 FOODTYPES =
   fa : "Fabrik"
@@ -25,6 +25,7 @@ FOODTYPES =
   bi : "Billa"
   bu : "Burger King"
   gu : "Gumpendorfer"
+  ma : "Margaretengürtel"
   pi : "Pizza"
 
 fetch = (target) ->
@@ -167,7 +168,7 @@ module.exports = (robot) ->
       \nFabrik: \n#{fabrikMenu}\n
       \nErni's: \n#{ernisMenu}\n
       \nNatürlich gibt es auch noch:
-      \nSpar, Billa, Burgerking, Gumpendorfer oder Pizza."
+      \nSpar, Billa, Burgerking, Gumpendorfer, Margaretengürtel oder Pizza."
 
   # subscribe to food and reminder
   robot.hear (new RegExp("(#{FOOD_REGEX}) \\+(\\d*)", "i"))

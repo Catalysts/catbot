@@ -2,7 +2,10 @@
   "name": "hubot",
   "version": "0.2.0",
   "private": true,
-  "author": "Lorenz Leutgeb <lorenz.leutgeb@catalysts.cc>",
+  "authors": [
+    "Christoph Holter <christoph.holter@catalysts.cc>",
+    "Lorenz Leutgeb <lorenz.leutgeb@catalysts.cc>"
+  ],
   "description": "A simple helpful robot for Catalysts",
   "dependencies": {
     "hubot": "^2.18.0",

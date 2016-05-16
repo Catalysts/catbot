@@ -15,6 +15,7 @@ moment = require "moment"
 FOOD_TIME =
   HOUR : 11
   MINUTE : 45
+  OFFSET : 0
 
 FOOD_REGEX = "fab?r?i?k?|ern?i?s?|spa?r?|bil?l?a?|bur?g?e?r?k?i?n?g?|bk|gum?p?e?n?d?o?r?f?e?r?|mar?g?a?r?e?t?e?n?g?ü?r?t?e?l?|piz?z?a?"
 
@@ -129,18 +130,18 @@ module.exports = (robot) ->
 
   # wait for given time and then send a message to #vie-food with all
   # subscribed users for this food type.
-  setReminder = (foodType, hour = FOOD_TIME.HOUR, minute = FOOD_TIME.MINUTE) ->
+  setReminder = (foodType, hour = FOOD_TIME.HOUR, minute = FOOD_TIME.MINUTE, offset = FOOD_TIME.OFFSET ) ->
     setTimeout ( =>
       eater = robot.brain.get "feedme.eater"
       people = if eater and foodType of eater then eater[foodType] else []
-      msg = if people.length > 0 then "#{people.toString()}:\n" else ""
+      msg = if people.length > 0 then "#{people.join(", ")}:\n" else ""
       robot.messageRoom "vie-food", msg + "Los los ... #{FOODTYPES[foodType]} wartet nicht!"
       delete reminder[foodType]
       # clear all eaters, they're supposed to be fed.
       if eater then delete eater[foodType]
       robot.brain.set "feedme.eater", eater
     ), moment().hour(hour).minute(minute).seconds(0)
-      .diff(moment(), 'milliseconds')
+      .diff(moment(), 'milliseconds') - offset*1000
 
   existsReminder = (foodType) ->
     foodType of reminder
@@ -195,6 +196,8 @@ module.exports = (robot) ->
     if foodType is "bk" then foodType = "bu"
     hour = res.match[2]
     minute = res.match[3]
+    # seconds after UTC (CEST = 7200)
+    offset = res.message.user.slack.tz_offset
     if foodType of reminder
       clearTimeout(reminder[foodType])
-    reminder[foodType] = setReminder(foodType, hour, minute)
+    reminder[foodType] = setReminder(foodType, hour, minute, offset)

@@ -10,12 +10,14 @@
 
 urllib = require "urllib-sync"
 jsdom = require "jsdom"
-moment = require "moment"
+moment = require "moment-timezone"
 
 FOOD_TIME =
   HOUR : 11
   MINUTE : 45
-  OFFSET : 0
+  OFFSET : moment().tz('Europe/Vienna').utcOffset()*60
+
+FOOD_CHANNEL = "vie-food"
 
 FOOD_REGEX = "fab?r?i?k?|ern?i?s?|spa?r?|bil?l?a?|bur?g?e?r?k?i?n?g?|bk|gum?p?e?n?d?o?r?f?e?r?|mar?g?a?r?e?t?e?n?g?ü?r?t?e?l?|piz?z?a?"
 
@@ -128,14 +130,14 @@ module.exports = (robot) ->
   # stored. As a result reminders are lost on restart of hubot.
   reminder = {}
 
-  # wait for given time and then send a message to #vie-food with all
+  # wait for given time and then send a message to FOOD_CHANNEL with all
   # subscribed users for this food type.
   setReminder = (foodType, hour = FOOD_TIME.HOUR, minute = FOOD_TIME.MINUTE, offset = FOOD_TIME.OFFSET ) ->
     setTimeout ( =>
       eater = robot.brain.get "feedme.eater"
       people = if eater and foodType of eater then eater[foodType] else []
       msg = if people.length > 0 then "#{people.join(", ")}:\n" else ""
-      robot.messageRoom "vie-food", msg + "Los los ... #{FOODTYPES[foodType]} wartet nicht!"
+      robot.messageRoom FOOD_CHANNEL, msg + "Los los ... #{FOODTYPES[foodType]} wartet nicht!"
       delete reminder[foodType]
       # clear all eaters, they're supposed to be fed.
       if eater then delete eater[foodType]
@@ -184,8 +186,10 @@ module.exports = (robot) ->
     user += " x#{count}" if count > 1
     eater[foodType].push user
     robot.brain.set "feedme.eater", eater
+    # seconds after UTC (CEST = 7200)
+    offset = res.message.user.slack.tz_offset
     # if there is no reminder + it's before default time => set new reminder
-    if moment().isBefore(moment().hour(FOOD_TIME.HOUR).minute(FOOD_TIME.MINUTE))
+    if moment().isBefore(moment().hour(FOOD_TIME.HOUR).minute(FOOD_TIME.MINUTE).subtract(offset, 's'))
       unless existsReminder(foodType)
         reminder[foodType] = setReminder(foodType)
 
@@ -201,3 +205,12 @@ module.exports = (robot) ->
     if foodType of reminder
       clearTimeout(reminder[foodType])
     reminder[foodType] = setReminder(foodType, hour, minute, offset)
+
+  # clears old reminder + reminds everybody to go to lunch.
+  robot.hear (new RegExp("(#{FOOD_REGEX}) now", "i"))
+  , (res) ->
+    foodType = res.match[1].toLowerCase().substr(0,2)
+    if foodType is "bk" then foodType = "bu"
+    if foodType of reminder
+      clearTimeout(reminder[foodType])
+    reminder[foodType] = setReminder(foodType, 0, 0, 0)

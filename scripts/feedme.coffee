@@ -205,3 +205,12 @@ module.exports = (robot) ->
     if foodType of reminder
       clearTimeout(reminder[foodType])
     reminder[foodType] = setReminder(foodType, hour, minute, offset)
+
+  # clears old reminder + reminds everybody to go to lunch.
+  robot.hear (new RegExp("(#{FOOD_REGEX}) now", "i"))
+  , (res) ->
+    foodType = res.match[1].toLowerCase().substr(0,2)
+    if foodType is "bk" then foodType = "bu"
+    if foodType of reminder
+      clearTimeout(reminder[foodType])
+    reminder[foodType] = setReminder(foodType, 0, 0, 0)

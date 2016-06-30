@@ -5,5 +5,10 @@
 # office channel.
 module.exports = (robot) ->
   robot.router.post '/vie/door', (req, res) ->
-    return unless req.body?.firstName and req.body?.lastName
+    unless req.body?.firstName and req.body?.lastName
+      res.status 400
+      res.send 'Rad Request'
+      return
+
     robot.messageRoom 'vie', "#{req.body.firstName + " " + req.body.lastName} entered the office!"
+    res.send 'OK'

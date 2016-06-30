@@ -5,6 +5,5 @@
 # office channel.
 module.exports = (robot) ->
   robot.router.post '/vie/door', (req, res) ->
-    req = JSON.parse(req)
-    return unless req?.firstName and req?.lastName
-    robot.messageRoom '#vie', "#{req.firstName + req.lastName} entered the office!"
+    return unless req.body?.firstName and req.body?.lastName
+    robot.messageRoom 'vie', "#{req.body.firstName + " " + req.body.lastName} entered the office!"

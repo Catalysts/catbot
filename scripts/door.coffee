@@ -10,5 +10,5 @@ module.exports = (robot) ->
       res.send 'Rad Request'
       return
 
-    robot.messageRoom 'vie', "#{req.body.firstName + " " + req.body.lastName} entered the office!"
+    robot.messageRoom 'vie-bots', "#{req.body.firstName + " " + req.body.lastName} entered the office!"
     res.send 'OK'

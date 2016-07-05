@@ -34,9 +34,8 @@ FOODTYPES =
 fetch = (target) ->
   urllib.request(target).data
 
-
 class Fabrik
-  target : "http://diefabrik.co.at/de/"
+  target : "http://diefabrik.co.at"
   holidayMagic : "urlaub"
   errors :
     closed : "fabrik is closed"

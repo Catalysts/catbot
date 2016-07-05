@@ -36,7 +36,7 @@ fetch = (target) ->
 
 
 class Fabrik
-  target : "http://diefabrik.co.at/"
+  target : "http://diefabrik.co.at/de/"
   holidayMagic : "urlaub"
   errors :
     closed : "fabrik is closed"
@@ -51,11 +51,11 @@ class Fabrik
     text.toLowerCase().indexOf(@holidayMagic) > 0
 
   parseDates: ($) ->
-    docDate = $(".modal-body h3:eq(0)").html()
+    docDate = $("#menu11 h4:eq(1)").html()
     /(\d{2}\.\d{2}\.\d{4}) bis (\d{2}\.\d{2}\.\d{4})/.exec(docDate)
 
   extractMeal: ($, day) ->
-    menu = $(".modal-body table:eq(1) tr:eq(#{day}) td:eq(1)").html()
+    menu = $("#menu11 tr:eq(#{day + 1}) td:eq(1)").text()
     # Ruhetag
     if menu.toLowerCase() is 'ruhetag' then @errors.resting else menu
 

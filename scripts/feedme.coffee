@@ -36,7 +36,6 @@ fetch = (target) ->
 
 class Fabrik
   target : "http://diefabrik.co.at"
-  holidayMagic : "urlaub"
   errors :
     closed : "fabrik is closed"
     menuFromPast : "the menu is outdated"

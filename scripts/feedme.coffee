@@ -36,18 +36,13 @@ fetch = (target) ->
 
 class Fabrik
   target : "http://diefabrik.co.at"
-  holidayMagic : "urlaub"
   errors :
     closed : "fabrik is closed"
     menuFromPast : "the menu is outdated"
     menuFromFuture : "the menu is from the future"
     resting : "fabrik is on a day off"
-    holiday : "fabrik is probably on holiday, fall back to manual check"
 
   constructor: (@robot) ->
-
-  checkHoliday: (text) =>
-    text.toLowerCase().indexOf(@holidayMagic) > 0
 
   parseDates: ($) ->
     docDate = $("#menu11 h4:eq(1)").html()
@@ -64,10 +59,6 @@ class Fabrik
     return if now.isSameOrBefore(lastCheck, 'day')
 
     rawbody = fetch(@target)
-
-    if @checkHoliday(rawbody.toString())
-      @robot.brain.set "feedme.fabrik.save", @errors.holiday
-      return
 
     # hack to include jQuery
     $ = require("jquery")(jsdom.jsdom(rawbody).defaultView)

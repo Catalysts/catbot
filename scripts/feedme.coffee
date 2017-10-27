@@ -45,7 +45,7 @@ class Fabrik
   constructor: (@robot) ->
 
   parseDates: ($) ->
-    docDate = $("#special-modal h3").html()
+    docDate = $("#menu11 tr:eq(0) td:eq(1)").text()
     /(\d{2}\.\d{2}\.\d{4}) bis (\d{2}\.\d{2}\.\d{4})/.exec(docDate)
 
   extractMeal: ($, day) ->

@@ -44,6 +44,11 @@ Then you can interact with hubot by typing `hubot help`.
     hubot help - Displays all of the help commands that hubot knows about.
     ...
 
+To connect to a Slack team you need to set first the environment variable `HUBOT_SLACK_TOKEN` and
+then start hubot via
+
+    % bin/hubot --adapter slack
+
 ### Configuration
 
 A few scripts (including some installed by default) require environment

@@ -23,7 +23,7 @@ FOOD_REGEX = "fab?r?i?k?|ern?i?s?|spa?r?|bil?l?a?|bur?g?e?r?k?i?n?g?|bk|gum?p?e?
 
 FOODTYPES =
   fa : "Fabrik"
-  er : "Erni's"
+  er : "Erni's [sic]"
   sp : "Spar"
   bi : "Billa"
   bu : "Burger King"
@@ -159,7 +159,7 @@ module.exports = (robot) ->
 
     res.send "Heutiges Mittagsmenü:\n
       \nFabrik: \n#{fabrikMenu}\n
-      \nErni's: \n#{ernisMenu}\n
+      \nErni's [sic]: \n#{ernisMenu}\n
       \nNatürlich gibt es auch noch:
       \nSpar, Billa, Burgerking, Gumpendorfer, Margaretengürtel oder Pizza."
 

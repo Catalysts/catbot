@@ -1,9 +1,10 @@
 # Description:
-#   Shows what"s edible.
+#   Shows what's edible.
 #
 # Notes:
 #   This includes
 #    * fetching from fabrik
+#    * fetching from flexibelpoint
 #    * fetching from ernis
 #
 # Author: cholter
@@ -23,6 +24,7 @@ FOOD_REGEX = "fab?r?i?k?|ern?i?s?|spa?r?|bil?l?a?|bur?g?e?r?k?i?n?g?|bk|gum?p?e?
 
 FOODTYPES =
   fa : "Fabrik"
+  fp : "Flexibelpoint"
   er : "Erni's [sic]"
   sp : "Spar"
   bi : "Billa"
@@ -80,6 +82,35 @@ class Fabrik
       @robot.brain.set "feedme.fabrik.save", @extractMeal($, day)
       @robot.brain.set "feedme.fabrik.lastCheck", now
 
+class Flexibelpoint
+  target : "http://flexibelpoint.at"
+
+  constructor: (@robot) ->
+
+  extractWeeklyMeal: ($) ->
+    $.trim($(".menuday:eq(0)").next().text())
+
+  extractMeal: ($, day) ->
+    $.trim($(".menuday:eq(#{day})").next().text())
+
+  getMenu: (now, day) =>
+    lastCheck = moment(@robot.brain.get("feedme.flexibelpoint.lastCheck") or 0)
+    # only check once per day, otherwise we're good to go
+    return if now.isSameOrBefore(lastCheck, 'day')
+
+    rawbody = fetch(@target)
+
+    # hack to include jQuery
+    $ = require("jquery")(jsdom.jsdom(rawbody).defaultView)
+
+    # flexibelpoint is closed
+    if day > 5
+      @robot.brain.set "feedme.flexibelpoint.save", @errors.closed
+
+    else
+      @robot.brain.set "feedme.flexibelpoint.save", @extractMeal($, day) + "\n" +  "Wochenempfehlung: " + @extractWeeklyMeal($)
+      @robot.brain.set "feedme.flexibelpoint.lastCheck", now
+
 class Ernis
   target : "http://www.ernis.at"
   errors :
@@ -111,6 +142,7 @@ class Ernis
 module.exports = (robot) ->
 
   fabrik = new Fabrik(robot)
+  flexibelpoint = new Flexibelpoint(robot)
   ernis = new Ernis(robot)
 
   # note that we can't store the reminders anywhere because node.js returns a
@@ -153,12 +185,15 @@ module.exports = (robot) ->
     # ranging from 1 (Monday) to 7 (Sunday)
     day = now.isoWeekday()
     fabrik.getMenu(now, day)
+    flexibelpoint.getMenu(now, day)
     ernis.getMenu(now, day)
     fabrikMenu = robot.brain.get "feedme.fabrik.save"
+    flexibelpointMenu = robot.brain.get "feedme.flexibelpoint.save"
     ernisMenu = robot.brain.get "feedme.ernis.save"
 
     res.send "Heutiges Mittagsmenü:\n
       \nFabrik: \n#{fabrikMenu}\n
+      \nFlexibelpoint: \n#{flexibelpointMenu}\n
       \nErni's [sic]: \n#{ernisMenu}\n
       \nNatürlich gibt es auch noch:
       \nSpar, Billa, Burgerking, Gumpendorfer, Margaretengürtel oder Pizza."

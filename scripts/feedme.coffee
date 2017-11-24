@@ -84,6 +84,8 @@ class Fabrik
 
 class Flexibelpoint
   target : "http://flexibelpoint.at"
+  errors :
+    closed : "flexibelpoint is closed"
 
   constructor: (@robot) ->
 

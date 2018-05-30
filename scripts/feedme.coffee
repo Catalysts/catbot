@@ -47,11 +47,11 @@ class Fabrik
   constructor: (@robot) ->
 
   parseDates: ($) ->
-    docDate = $("#menu11 tr:eq(0) td:eq(1)").text()
+    docDate = $("#special-modal h3:eq(0)").text()
     /(\d{2}\.\d{2}\.\d{4}) bis (\d{2}\.\d{2}\.\d{4})/.exec(docDate)
 
   extractMeal: ($, day) ->
-    menu = $("#menu11 tr:eq(#{day + 1}) td:eq(1)").text()
+    menu = $("#special-modal tr:eq(#{day + 2}) td:eq(1)").text()
     # Ruhetag
     if menu.toLowerCase() is 'ruhetag' then @errors.resting else menu
 
@@ -147,40 +147,6 @@ module.exports = (robot) ->
   flexibelpoint = new Flexibelpoint(robot)
   ernis = new Ernis(robot)
 
-  # note that we can't store the reminders anywhere because node.js returns a
-  # Timeout object in contrast to the usual (browser) integer which is then
-  # needed to clear the timeout later on (if there is a new reminder set). This
-  # Timeout object can't be JSON.stringified (circular reference) and thus not
-  # stored. As a result reminders are lost on restart of hubot.
-  reminder = {}
-
-  # wait for given time and then send a message to FOOD_CHANNEL with all
-  # subscribed users for this food type.
-  setReminder = (foodType, hour = FOOD_TIME.HOUR, minute = FOOD_TIME.MINUTE, offset = FOOD_TIME.OFFSET ) ->
-    setTimeout ( =>
-      eater = robot.brain.get "feedme.eater"
-      people = if eater and foodType of eater then eater[foodType] else []
-      msg = if people.length > 0 then "#{people.join(", ")}:\n" else ""
-      robot.messageRoom FOOD_CHANNEL, msg + "Los los ... #{FOODTYPES[foodType]} wartet nicht!"
-      delete reminder[foodType]
-      # clear all eaters, they're supposed to be fed.
-      if eater then delete eater[foodType]
-      robot.brain.set "feedme.eater", eater
-    ), moment().hour(hour).minute(minute).seconds(0)
-      .diff(moment(), 'milliseconds') - offset*1000
-
-  existsReminder = (foodType) ->
-    foodType of reminder
-
-  # clear all reservations + reminders @midnight
-  setClearTimeout = ->
-    setTimeout ( =>
-      robot.brain.set "feedme.eater", {}
-      reminder = {}
-      setClearTimeout()
-    ), moment().endOf('day').diff(moment(), 'milliseconds')
-
-  setClearTimeout()
 
   robot.respond /feedme/i, (res) ->
     now = moment()
@@ -200,44 +166,3 @@ module.exports = (robot) ->
       \nNatürlich gibt es auch noch:
       \nSpar, Billa, Burgerking, Gumpendorfer, Margaretengürtel oder Pizza."
 
-  # subscribe to food and reminder
-  robot.hear (new RegExp("(#{FOOD_REGEX}) \\+(\\d*)", "i"))
-  , (res) ->
-    foodType = res.match[1].toLowerCase().substr(0,2)
-    if foodType is "bk" then foodType = "bu"
-    eater = robot.brain.get("feedme.eater") or {}
-    unless foodType of eater then eater[foodType] = []
-    # save name of user who sent the message to notify him later
-    count = res.match[2]
-    user = "@#{res.message.user.name}"
-    user += " x#{count}" if count > 1
-    eater[foodType].push user
-    robot.brain.set "feedme.eater", eater
-    # seconds after UTC (CEST = 7200)
-    offset = res.message.user.slack.tz_offset
-    # if there is no reminder + it's before default time => set new reminder
-    if moment().isBefore(moment().hour(FOOD_TIME.HOUR).minute(FOOD_TIME.MINUTE).subtract(offset, 's'))
-      unless existsReminder(foodType)
-        reminder[foodType] = setReminder(foodType)
-
-  # clears old reminder + sets new one with given time.
-  robot.hear (new RegExp("(#{FOOD_REGEX}) (\\d\\d).?(\\d\\d)", "i"))
-  , (res) ->
-    foodType = res.match[1].toLowerCase().substr(0,2)
-    if foodType is "bk" then foodType = "bu"
-    hour = res.match[2]
-    minute = res.match[3]
-    # seconds after UTC (CEST = 7200)
-    offset = res.message.user.slack.tz_offset
-    if foodType of reminder
-      clearTimeout(reminder[foodType])
-    reminder[foodType] = setReminder(foodType, hour, minute, offset)
-
-  # clears old reminder + reminds everybody to go to lunch.
-  robot.hear (new RegExp("(#{FOOD_REGEX}) now", "i"))
-  , (res) ->
-    foodType = res.match[1].toLowerCase().substr(0,2)
-    if foodType is "bk" then foodType = "bu"
-    if foodType of reminder
-      clearTimeout(reminder[foodType])
-    reminder[foodType] = setReminder(foodType, 0, 0, 0)

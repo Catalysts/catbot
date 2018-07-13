@@ -90,10 +90,11 @@ class Flexibelpoint
   constructor: (@robot) ->
 
   extractWeeklyMeal: ($) ->
-    $.trim($(".menuday:eq(0)").next().text())
+    $.trim($(".menuday:contains('WOCHE')").next().text())
 
   extractMeal: ($, day) ->
-    $.trim($(".menuday:eq(#{day})").next().text())
+    weekdays = new Array("MONTAG", "DIENSTAG", "MITTWOCH", "DONNERSTAG", "FREITAG");
+    $.trim($(".menuday:contains('" + weekdays[day - 1] + "')").next().text())
 
   getMenu: (now, day) =>
     lastCheck = moment(@robot.brain.get("feedme.flexibelpoint.lastCheck") or 0)

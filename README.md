@@ -32,6 +32,8 @@ You can start hubot locally by running:
 
     % bin/hubot
 
+To run the command "feedme", enter "catbot feedme" after start.
+
 You'll see some start up output and a prompt:
 
     [Sat Feb 28 2015 12:38:27 GMT+0000 (GMT)] INFO Using default redis on localhost:6379
